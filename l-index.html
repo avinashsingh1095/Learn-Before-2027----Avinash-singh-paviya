@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LEARN-BEFORE 2027</title>
+  <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-display@700,600&f[]=satoshi@500,400,700&display=swap" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #f2f2f2; }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+    @keyframes spin    { to { transform: rotate(360deg); } }
+    @keyframes fadeIn  { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes slideUp { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes echoIn  { from { opacity:0; letter-spacing:0.1em; } to { opacity:1; letter-spacing:-0.05em; } }
+    input::placeholder { color: #aaa; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+// ── LocalStorage helpers ────────────────────────────────────────────────────
+const ls = {
+  get:    (k, fb=null)  => { try { const v=localStorage.getItem(k); return v!==null?JSON.parse(v):fb; } catch{ return fb; } },
+  set:    (k, v)        => { try { localStorage.setItem(k, JSON.stringify(v)); } catch{} },
+  remove: (k)           => { try { localStorage.removeItem(k); } catch{} },
+  keys:   ()            => { try { return Object.keys(localStorage); } catch{ return []; } },
+};
+
+const userKey = (uid, suffix) => `rmap_u${uid}_${suffix}`;
+
+// ── Palette helpers ──────────────────────────────────────────────────────────
+const AVATAR_COLORS = ["#FF6B35","#4ECDC4","#A78BFA","#F59E0B","#3B82F6","#EC4899","#10B981","#EF4444"];
+
+// ── Data ────────────────────────────────────────────────────────────────────
+const PHASES = [
+  {
+    id:1, title:"Phase 1", label:"Foundation", duration:"Weeks 1–4", color:"#FF6B35",
+    description:"Build the habits and thinking patterns before writing a single line of code.",
+    categories:[
+      { name:"Mindset",         items:["Habit building","Daily routine","Goal setting","Avoid distractions","Self learning","Patience","Growth mindset","Long-term thinking"] },
+      { name:"Thinking Skills", items:["Learning fast","Google search","Reading docs","Note making","Problem breakdown"] },
+    ],
+    projects:[
+      { id:"p1-1", title:"30-Day Learning Schedule", desc:"Build a detailed daily plan in Notion or Google Sheets. Include time blocks, topics, and weekly reviews." },
+      { id:"p1-2", title:"Personal Goal Board",      desc:"Create a visual goal tracker with 3-month, 6-month, and 1-year targets. Add milestones." },
+      { id:"p1-3", title:"Tech Learning Journal",    desc:"Write 3 things you learned each day for 2 weeks. Use Notion, Obsidian, or a plain notebook." },
+    ],
+  },
+  {
+    id:2, title:"Phase 2", label:"Tech Basics", duration:"Weeks 5–12", color:"#4ECDC4",
+    description:"The building blocks of software — this is where most beginners start their journey.",
+    categories:[
+      { name:"AI & Programming",  items:["AI basics","ChatGPT","Prompt writing","Automation","Python","JavaScript","HTML","CSS","Git","GitHub"] },
+      { name:"Core Development",  items:["APIs","Debugging","Problem solving","Data structures","Algorithms","OOP concepts","CLI basics","JSON","REST APIs","Version control"] },
+      { name:"Tools & Systems",   items:["Cloud basics","AWS basics","API integration","Testing basics","Debug tools","Dashboards","ETL basics"] },
+    ],
+    projects:[
+      { id:"p2-1", title:"Personal Portfolio Website", desc:"Build a portfolio with HTML, CSS, and JavaScript. Include your name, skills, and a contact form. Host on GitHub Pages." },
+      { id:"p2-2", title:"Python CLI Calculator",      desc:"Build a command-line calculator in Python that handles arithmetic, history, and error handling." },
+      { id:"p2-3", title:"To-Do App with Local Storage",desc:"Build a browser-based to-do app using HTML, CSS, and vanilla JavaScript with local storage persistence." },
+      { id:"p2-4", title:"GitHub Profile Setup",       desc:"Create a professional GitHub profile README, push at least 3 projects, and maintain a green streak for 2 weeks." },
+    ],
+  },
+  {
+    id:3, title:"Phase 3", label:"Data & Tools", duration:"Weeks 13–20", color:"#A78BFA",
+    description:"Data is the fuel of every modern business. Learn to collect, clean, and visualize it.",
+    categories:[
+      { name:"Data Skills",      items:["Data analysis","Excel","SQL","Power BI","Tableau","Statistics","NumPy","Pandas","Data cleaning","Visualization"] },
+      { name:"Tools & Systems",  items:["Big data basics","Jupyter","Google Sheets","ETL basics"] },
+    ],
+    projects:[
+      { id:"p3-1", title:"COVID-19 Data Analysis",    desc:"Download a public COVID dataset from Kaggle. Analyze trends using Python Pandas and create 3 charts with Matplotlib." },
+      { id:"p3-2", title:"Sales Dashboard (Excel)",   desc:"Build an interactive sales dashboard in Excel or Google Sheets using pivot tables, charts, and slicers." },
+      { id:"p3-3", title:"SQL Store Database",        desc:"Design and query a simple e-commerce database with products, customers, and orders. Write 10 different SQL queries." },
+      { id:"p3-4", title:"First Kaggle Submission",   desc:"Enter the Titanic or House Prices beginner competition. Submit a Jupyter Notebook with proper EDA and a model." },
+    ],
+  },
+  {
+    id:4, title:"Phase 4", label:"Career Launch", duration:"Weeks 21–28", color:"#F59E0B",
+    description:"Skills get you hired. Communication gets you paid. Now put yourself out there.",
+    categories:[
+      { name:"Communication",     items:["Communication","English","Public speaking","Networking","LinkedIn","Resume","Portfolio","Freelancing","Remote work"] },
+      { name:"Career Growth",     items:["Personal branding","Interview skills","Cold emailing","Client handling","Big data basics","Google Sheets"] },
+      { name:"Advanced Thinking", items:["Critical thinking","Creativity","Adaptability","Decision making","Execution","Feedback taking","Productivity"] },
+    ],
+    projects:[
+      { id:"p4-1", title:"LinkedIn Content Series",    desc:"Write and publish 5 LinkedIn posts documenting your learning journey. Track impressions and iterate." },
+      { id:"p4-2", title:"Polished Portfolio Site",    desc:"Rebuild your portfolio featuring 3 real projects, a blog section, your story, and a professional headshot." },
+      { id:"p4-3", title:"Cold Outreach Campaign",     desc:"Send 10 personalized cold emails to companies or freelance clients. Track replies and refine your template." },
+      { id:"p4-4", title:"Mock Interview Sessions",    desc:"Complete 3 mock interviews using Pramp or a friend. Record yourself, review answers, and improve." },
+    ],
+  },
+];
+
+const TOTAL_SKILLS   = PHASES.reduce((a,p)=>a+p.categories.reduce((b,c)=>b+c.items.length,0),0);
+const TOTAL_PROJECTS = PHASES.reduce((a,p)=>a+p.projects.length,0);
+
+// ════════════════════════════════════════════════════════
+//  LOGIN SCREEN
+// ════════════════════════════════════════════════════════
+function LoginScreen({ onLogin }) {
+  const [users,    setUsers]    = useState(() => ls.get("rmap_users", []));
+  const [mode,     setMode]     = useState("select"); // "select" | "create"
+  const [uname,    setUname]    = useState("");
+  const [pin,      setPin]      = useState("");
+  const [pinConf,  setPinConf]  = useState("");
+  const [selUser,  setSelUser]  = useState(null);
+  const [pinInput, setPinInput] = useState("");
+  const [err,      setErr]      = useState("");
+  const inputRef = useRef(null);
+
+  useEffect(() => { if (mode==="create" && inputRef.current) inputRef.current.focus(); }, [mode]);
+
+  const createUser = () => {
+    const name = uname.trim();
+    if (!name) { setErr("Please enter a name"); return; }
+    if (name.length < 2) { setErr("Name must be at least 2 characters"); return; }
+    if (users.find(u => u.name.toLowerCase()===name.toLowerCase())) { setErr("That name is already taken"); return; }
+    if (pin && pin.length < 4) { setErr("PIN must be at least 4 digits"); return; }
+    if (pin && pin !== pinConf) { setErr("PINs don't match"); return; }
+
+    const uid = Date.now().toString(36);
+    const colorIdx = users.length % AVATAR_COLORS.length;
+    const newUser = { id:uid, name, pin: pin||"", color: AVATAR_COLORS[colorIdx], created: Date.now() };
+    const next = [...users, newUser];
+    ls.set("rmap_users", next);
+    setUsers(next);
+    onLogin(newUser);
+  };
+
+  const loginUser = () => {
+    if (!selUser) return;
+    if (selUser.pin && selUser.pin !== pinInput) { setErr("Incorrect PIN"); return; }
+    onLogin(selUser);
+  };
+
+  const deleteUser = (uid, e) => {
+    e.stopPropagation();
+    if (!confirm("Delete this user and all their data?")) return;
+    const next = users.filter(u => u.id !== uid);
+    ls.set("rmap_users", next);
+    // wipe user keys
+    ls.keys().filter(k => k.startsWith(`rmap_u${uid}_`)).forEach(k => ls.remove(k));
+    setUsers(next);
+    if (selUser?.id===uid) setSelUser(null);
+  };
+
+  const BG="#f2f2f2"; const INK="#111111"; const MUTED="#838282"; const CARD="#ffffff"; const BORDER="rgba(30,30,30,0.1)";
+
+  return (
+    <div style={{ minHeight:"100vh", background:BG, fontFamily:"'Satoshi',sans-serif",
+      display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
+      padding:"24px", animation:"fadeIn 0.4s ease" }}>
+
+      {/* Logo */}
+      <div style={{ marginBottom:"48px", textAlign:"center" }}>
+        <div style={{ position:"relative", display:"inline-block", marginBottom:"10px" }}>
+          {["rgba(0,0,0,0.08)","rgba(0,0,0,0.05)","rgba(0,0,0,0.03)"].map((c,i)=>(
+            <div key={i} style={{ position:"absolute", top:`${(i+1)*0.04}em`, left:`-${(i+1)*0.04}em`,
+              fontFamily:"'Clash Display',sans-serif", fontSize:"clamp(36px,8vw,72px)",
+              fontWeight:"700", letterSpacing:"-0.05em", lineHeight:"0.9",
+              color:c, pointerEvents:"none", userSelect:"none", whiteSpace:"nowrap" }}>LEARN 2027</div>
+          ))}
+          <div style={{ position:"relative", fontFamily:"'Clash Display',sans-serif",
+            fontSize:"clamp(36px,8vw,72px)", fontWeight:"700",
+            letterSpacing:"-0.05em", lineHeight:"0.9", color:INK, whiteSpace:"nowrap",
+            animation:"echoIn 0.6s ease" }}>LEARN 2027</div>
+        </div>
+        <div style={{ fontSize:"11px", letterSpacing:"3px", color:MUTED }}>YOUR PERSONAL LEARNING ROADMAP</div>
+      </div>
+
+      <div style={{ width:"100%", maxWidth:"420px" }}>
+
+        {/* ── SELECT USER mode ── */}
+        {mode==="select" && (
+          <div style={{ animation:"slideUp 0.3s ease" }}>
+            {users.length > 0 ? (
+              <>
+                <div style={{ fontSize:"10px", letterSpacing:"2.5px", color:MUTED, marginBottom:"14px", fontWeight:"700" }}>
+                  SELECT YOUR PROFILE
+                </div>
+                <div style={{ display:"flex", flexDirection:"column", gap:"8px", marginBottom:"20px" }}>
+                  {users.map(u => (
+                    <div key={u.id} onClick={()=>{ setSelUser(u); setErr(""); setPinInput(""); }}
+                      style={{
+                        display:"flex", alignItems:"center", gap:"14px",
+                        background: selUser?.id===u.id ? INK : CARD,
+                        color:      selUser?.id===u.id ? BG  : INK,
+                        border:`1px solid ${selUser?.id===u.id ? INK : BORDER}`,
+                        borderRadius:"14px", padding:"14px 16px",
+                        cursor:"pointer", transition:"all 0.15s",
+                      }}>
+                      <div style={{ width:"40px", height:"40px", flexShrink:0, borderRadius:"12px",
+                        background:u.color, display:"flex", alignItems:"center", justifyContent:"center",
+                        fontFamily:"'Clash Display',sans-serif", fontWeight:"700", fontSize:"16px",
+                        color:"#fff", letterSpacing:"-0.02em" }}>
+                        {u.name.slice(0,2).toUpperCase()}
+                      </div>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontWeight:"700", fontSize:"14px" }}>{u.name}</div>
+                        <div style={{ fontSize:"11px", opacity:0.55, marginTop:"2px" }}>
+                          {u.pin ? "🔒 PIN protected" : "No PIN"} · Joined {new Date(u.created).toLocaleDateString("en-IN",{month:"short",year:"numeric"})}
+                        </div>
+                      </div>
+                      {/* Progress badge */}
+                      <UserProgressBadge uid={u.id} color={u.color} inv={selUser?.id===u.id} />
+                      <button onClick={(e)=>deleteUser(u.id,e)}
+                        title="Delete user"
+                        style={{ background:"transparent", border:"none", cursor:"pointer",
+                          fontSize:"16px", color: selUser?.id===u.id ? "rgba(255,255,255,0.4)" : "#ccc",
+                          padding:"4px", lineHeight:1, flexShrink:0 }}>×</button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* PIN input if needed */}
+                {selUser?.pin && (
+                  <div style={{ marginBottom:"16px", animation:"slideUp 0.2s ease" }}>
+                    <input value={pinInput} onChange={e=>setPinInput(e.target.value.replace(/\D/g,""))}
+                      onKeyDown={e=>e.key==="Enter"&&loginUser()}
+                      maxLength={8} type="password" placeholder={`Enter PIN for ${selUser.name}`}
+                      style={{ width:"100%", padding:"14px 16px", background:CARD,
+                        border:`1px solid ${err?"#ef4444":"#e0e0e0"}`, borderRadius:"12px",
+                        fontSize:"18px", letterSpacing:"6px", fontFamily:"'Satoshi',sans-serif",
+                        color:INK, outline:"none", textAlign:"center" }} />
+                  </div>
+                )}
+                {err && <div style={{ color:"#ef4444", fontSize:"12px", marginBottom:"12px", textAlign:"center" }}>{err}</div>}
+
+                <button onClick={loginUser} disabled={!selUser}
+                  style={{ width:"100%", background:selUser?INK:"#ccc", color:BG,
+                    border:"none", borderRadius:"14px", padding:"16px",
+                    fontFamily:"'Clash Display',sans-serif", fontWeight:"700",
+                    fontSize:"15px", letterSpacing:"-0.02em",
+                    cursor:selUser?"pointer":"not-allowed", marginBottom:"12px",
+                    transition:"background 0.15s" }}>
+                  {selUser ? `ENTER AS ${selUser.name.toUpperCase()}` : "SELECT A PROFILE →"}
+                </button>
+
+                <div style={{ textAlign:"center" }}>
+                  <button onClick={()=>{ setMode("create"); setErr(""); setSelUser(null); }} style={{
+                    background:"none", border:`1px solid ${BORDER}`, borderRadius:"100px",
+                    padding:"9px 20px", cursor:"pointer", fontSize:"11px", letterSpacing:"1.5px",
+                    color:MUTED, fontFamily:"'Satoshi',sans-serif", fontWeight:"700",
+                  }}>+ NEW PROFILE</button>
+                </div>
+              </>
+            ) : (
+              /* No users yet */
+              <div style={{ textAlign:"center", padding:"24px 0" }}>
+                <div style={{ fontSize:"48px", marginBottom:"16px" }}>👤</div>
+                <div style={{ fontFamily:"'Clash Display',sans-serif", fontSize:"22px", fontWeight:"700",
+                  letterSpacing:"-0.04em", color:INK, marginBottom:"8px" }}>No profiles yet</div>
+                <div style={{ color:MUTED, fontSize:"14px", marginBottom:"28px" }}>Create your first profile to start tracking your learning journey.</div>
+                <button onClick={()=>setMode("create")} style={{
+                  background:INK, color:BG, border:"none", borderRadius:"14px",
+                  padding:"14px 32px", cursor:"pointer",
+                  fontFamily:"'Clash Display',sans-serif", fontWeight:"700", fontSize:"15px", letterSpacing:"-0.02em",
+                }}>CREATE PROFILE</button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── CREATE mode ── */}
+        {mode==="create" && (
+          <div style={{ animation:"slideUp 0.3s ease" }}>
+            <button onClick={()=>{ setMode("select"); setErr(""); }} style={{
+              background:"none", border:"none", cursor:"pointer",
+              fontSize:"13px", color:MUTED, marginBottom:"24px",
+              fontFamily:"'Satoshi',sans-serif", fontWeight:"700",
+              display:"flex", alignItems:"center", gap:"6px",
+            }}>← BACK</button>
+
+            <div style={{ fontSize:"10px", letterSpacing:"2.5px", color:MUTED, marginBottom:"8px", fontWeight:"700" }}>NEW PROFILE</div>
+            <h2 style={{ fontFamily:"'Clash Display',sans-serif", fontSize:"28px", fontWeight:"700",
+              letterSpacing:"-0.04em", color:INK, marginBottom:"24px" }}>Create your account</h2>
+
+            <div style={{ display:"flex", flexDirection:"column", gap:"14px", marginBottom:"20px" }}>
+              <div>
+                <label style={{ fontSize:"10px", letterSpacing:"2px", color:MUTED, display:"block", marginBottom:"8px", fontWeight:"700" }}>YOUR NAME *</label>
+                <input ref={inputRef} value={uname} onChange={e=>{ setUname(e.target.value); setErr(""); }}
+                  onKeyDown={e=>e.key==="Enter"&&createUser()}
+                  placeholder="e.g. Avinash, Priya, Rahul"
+                  style={{ width:"100%", padding:"14px 16px", background:CARD,
+                    border:`1px solid ${err&&!uname.trim()?"#ef4444":"#e0e0e0"}`,
+                    borderRadius:"12px", fontSize:"14px", fontFamily:"'Satoshi',sans-serif",
+                    color:INK, outline:"none" }} />
+              </div>
+
+              <div>
+                <label style={{ fontSize:"10px", letterSpacing:"2px", color:MUTED, display:"block", marginBottom:"8px", fontWeight:"700" }}>
+                  PIN (optional — to protect your data)
+                </label>
+                <input value={pin} onChange={e=>{ setPin(e.target.value.replace(/\D/g,"")); setErr(""); }}
+                  type="password" maxLength={8} placeholder="4–8 digit PIN"
+                  style={{ width:"100%", padding:"14px 16px", background:CARD,
+                    border:"1px solid #e0e0e0", borderRadius:"12px",
+                    fontSize:"18px", letterSpacing:"6px", fontFamily:"'Satoshi',sans-serif",
+                    color:INK, outline:"none" }} />
+              </div>
+
+              {pin.length >= 4 && (
+                <div style={{ animation:"slideUp 0.2s ease" }}>
+                  <label style={{ fontSize:"10px", letterSpacing:"2px", color:MUTED, display:"block", marginBottom:"8px", fontWeight:"700" }}>CONFIRM PIN</label>
+                  <input value={pinConf} onChange={e=>{ setPinConf(e.target.value.replace(/\D/g,"")); setErr(""); }}
+                    onKeyDown={e=>e.key==="Enter"&&createUser()}
+                    type="password" maxLength={8} placeholder="Re-enter PIN"
+                    style={{ width:"100%", padding:"14px 16px", background:CARD,
+                      border:`1px solid ${err&&pin!==pinConf?"#ef4444":"#e0e0e0"}`,
+                      borderRadius:"12px", fontSize:"18px", letterSpacing:"6px",
+                      fontFamily:"'Satoshi',sans-serif", color:INK, outline:"none" }} />
+                </div>
+              )}
+            </div>
+
+            {/* Avatar preview */}
+            {uname.trim().length >= 2 && (
+              <div style={{ display:"flex", alignItems:"center", gap:"12px", marginBottom:"20px",
+                padding:"14px 16px", background:CARD, border:`1px solid ${BORDER}`, borderRadius:"12px",
+                animation:"slideUp 0.2s ease" }}>
+                <div style={{ width:"40px", height:"40px", borderRadius:"12px",
+                  background:AVATAR_COLORS[users.length % AVATAR_COLORS.length],
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  fontFamily:"'Clash Display',sans-serif", fontWeight:"700", fontSize:"16px",
+                  color:"#fff" }}>
+                  {uname.trim().slice(0,2).toUpperCase()}
+                </div>
+                <div style={{ fontSize:"13px", color:MUTED }}>
+                  Your profile will look like this →
+                </div>
+              </div>
+            )}
+
+            {err && <div style={{ color:"#ef4444", fontSize:"12px", marginBottom:"14px", textAlign:"center" }}>{err}</div>}
+
+            <button onClick={createUser} style={{
+              width:"100%", background:INK, color:BG, border:"none", borderRadius:"14px",
+              padding:"16px", fontFamily:"'Clash Display',sans-serif", fontWeight:"700",
+              fontSize:"15px", letterSpacing:"-0.02em", cursor:"pointer",
+            }}>CREATE & START →</button>
+          </div>
+        )}
+      </div>
+
+      <div style={{ marginTop:"40px", fontSize:"10px", letterSpacing:"2px", color:"#ccc" }}>
+        FOCUS · BUILD · SHIP · REPEAT
+      </div>
+    </div>
+  );
+}
+
+// Small progress badge used on user cards
+function UserProgressBadge({ uid, color, inv }) {
+  const checked  = ls.get(userKey(uid,"checked"), {});
+  const done     = Object.entries(checked).filter(([k,v])=>v).length;
+  const total    = TOTAL_SKILLS + TOTAL_PROJECTS;
+  const pct      = Math.round((done/total)*100)||0;
+  return (
+    <div style={{ textAlign:"right", flexShrink:0 }}>
+      <div style={{ fontFamily:"'Clash Display',sans-serif", fontWeight:"700", fontSize:"18px",
+        letterSpacing:"-0.04em", color: inv?"rgba(255,255,255,0.85)":color }}>{pct}%</div>
+      <div style={{ fontSize:"9px", letterSpacing:"1px", opacity:0.5 }}>DONE</div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════
+//  TOPIC MODAL
+// ════════════════════════════════════════════════════════
+function TopicModal({ topic, phase, onClose, dark, INK, BG, MUTED, CARD, BORDER }) {
+  const [info,    setInfo]    = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error,   setError]   = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("https://api.anthropic.com/v1/messages", {
+          method:"POST", headers:{"Content-Type":"application/json"},
+          body: JSON.stringify({
+            model:"claude-sonnet-4-20250514", max_tokens:1000,
+            messages:[{ role:"user", content:
+              `Beginner tech mentor. Skill: "${topic}", context: "${phase}". Return ONLY valid JSON, no markdown:
+{"what":"2 sentences","why":"1 sentence","steps":["Step 1: ...","Step 2: ...","Step 3: ...","Step 4: ..."],"resources":[{"name":"Name","url":"https://url","free":true},{"name":"Name","url":"https://url","free":true},{"name":"Name","url":"https://url","free":false}],"timeEstimate":"e.g. 1-2 weeks","project":"One beginner project"}`
+            }],
+          }),
+        });
+        const d    = await res.json();
+        const text = d.content.map(b=>b.type==="text"?b.text:"").join("");
+        setInfo(JSON.parse(text.replace(/```json|```/g,"").trim()));
+      } catch { setError("Couldn't load details. Please try again."); }
+      finally  { setLoading(false); }
+    })();
+  }, [topic]);
+
+  return (
+    <div onClick={onClose} style={{ position:"fixed",inset:0,zIndex:1000,
+      background:"rgba(0,0,0,0.75)",backdropFilter:"blur(10px)",
+      display:"flex",alignItems:"center",justifyContent:"center",padding:"20px" }}>
+      <div onClick={e=>e.stopPropagation()} style={{ background:BG,borderRadius:"20px",
+        maxWidth:"540px",width:"100%",maxHeight:"88vh",overflowY:"auto",padding:"36px",
+        position:"relative",fontFamily:"'Satoshi',sans-serif",
+        boxShadow:"0 40px 80px rgba(0,0,0,0.4)",
+        border:dark?"1px solid rgba(255,255,255,0.08)":"none",
+        animation:"fadeIn 0.2s ease" }}>
+        <button onClick={onClose} style={{ position:"absolute",top:"16px",right:"16px",
+          background:INK,color:BG,border:"none",borderRadius:"50%",width:"32px",height:"32px",
+          cursor:"pointer",fontSize:"18px",display:"flex",alignItems:"center",justifyContent:"center" }}>×</button>
+
+        <div style={{ fontSize:"10px",letterSpacing:"3px",color:MUTED,marginBottom:"6px",textTransform:"uppercase" }}>{phase}</div>
+        <h2 style={{ fontFamily:"'Clash Display',sans-serif",fontSize:"28px",fontWeight:"700",
+          margin:"0 0 28px",color:INK,letterSpacing:"-0.04em" }}>{topic}</h2>
+
+        {loading && (
+          <div style={{ textAlign:"center",padding:"48px 0" }}>
+            <div style={{ width:"32px",height:"32px",border:`3px solid ${dark?"#333":"#e0e0e0"}`,
+              borderTopColor:INK,borderRadius:"50%",animation:"spin 0.8s linear infinite",margin:"0 auto 12px" }} />
+            <div style={{ fontSize:"11px",letterSpacing:"2px",color:MUTED }}>LOADING...</div>
+          </div>
+        )}
+        {error && <div style={{ color:"#ef4444",fontSize:"14px" }}>{error}</div>}
+
+        {info && (
+          <div style={{ display:"flex",flexDirection:"column",gap:"24px",animation:"fadeIn 0.3s ease" }}>
+            {[
+              { lbl:"WHAT IT IS",          body:<p style={{ margin:0,fontSize:"14px",lineHeight:"1.75",color:INK }}>{info.what}</p> },
+              { lbl:"WHY IT MATTERS 2025–2027", body:<p style={{ margin:0,fontSize:"14px",lineHeight:"1.75",color:INK }}>{info.why}</p> },
+            ].map(s=>(
+              <div key={s.lbl}>
+                <div style={{ fontSize:"9px",letterSpacing:"2.5px",color:MUTED,marginBottom:"8px",fontWeight:"700" }}>{s.lbl}</div>
+                {s.body}
+              </div>
+            ))}
+
+            <div style={{ background:dark?"#1e1e1e":INK,color:dark?"#f0f0f0":BG,borderRadius:"12px",
+              padding:"14px 18px",display:"flex",alignItems:"center",gap:"12px",
+              border:dark?"1px solid rgba(255,255,255,0.08)":"none" }}>
+              <span style={{ fontSize:"20px" }}>⏱</span>
+              <div>
+                <div style={{ fontSize:"9px",letterSpacing:"2px",color:"#888",marginBottom:"2px" }}>TIME ESTIMATE</div>
+                <div style={{ fontFamily:"'Clash Display',sans-serif",fontSize:"16px",fontWeight:"700" }}>{info.timeEstimate}</div>
+              </div>
+            </div>
+
+            <div>
+              <div style={{ fontSize:"9px",letterSpacing:"2.5px",color:MUTED,marginBottom:"10px",fontWeight:"700" }}>STEP-BY-STEP</div>
+              <ol style={{ margin:0,padding:"0 0 0 18px",display:"flex",flexDirection:"column",gap:"8px" }}>
+                {info.steps.map((s,i)=>(
+                  <li key={i} style={{ fontSize:"13px",lineHeight:"1.65",color:INK }}>{s}</li>
+                ))}
+              </ol>
+            </div>
+
+            <div>
+              <div style={{ fontSize:"9px",letterSpacing:"2.5px",color:MUTED,marginBottom:"10px",fontWeight:"700" }}>RESOURCES</div>
+              <div style={{ display:"flex",flexDirection:"column",gap:"7px" }}>
+                {info.resources.map((r,i)=>(
+                  <a key={i} href={r.url} target="_blank" rel="noopener noreferrer" style={{
+                    display:"flex",alignItems:"center",justifyContent:"space-between",
+                    padding:"10px 14px",background:CARD,
+                    border:`1px solid ${dark?"rgba(255,255,255,0.1)":"#e0e0e0"}`,
+                    borderRadius:"10px",textDecoration:"none",color:INK,fontSize:"13px",fontWeight:"600",
+                  }}>
+                    <span style={{ flex:1 }}>↗ {r.name}</span>
+                    <span style={{ fontSize:"9px",letterSpacing:"1.5px",padding:"3px 8px",borderRadius:"100px",
+                      flexShrink:0,marginLeft:"8px",
+                      background:r.free?(dark?"#f0f0f0":INK):"transparent",
+                      color:r.free?(dark?"#111":BG):MUTED,
+                      border:`1px solid ${r.free?(dark?"#f0f0f0":INK):(dark?"rgba(255,255,255,0.2)":"#d0d0d0")}`,
+                    }}>{r.free?"FREE":"PAID"}</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <div style={{ fontSize:"9px",letterSpacing:"2.5px",color:MUTED,marginBottom:"8px",fontWeight:"700" }}>PRACTICE PROJECT</div>
+              <div style={{ background:dark?"#1e1e1e":INK,color:dark?"#f0f0f0":BG,borderRadius:"12px",
+                padding:"16px",fontSize:"13px",lineHeight:"1.75",
+                border:dark?"1px solid rgba(255,255,255,0.08)":"none" }}>🛠️ {info.project}</div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════
+//  USER SWITCHER DROPDOWN
+// ════════════════════════════════════════════════════════
+function UserSwitcher({ currentUser, onSwitch, onLogout, dark, INK, BG, MUTED, CARD, BORDER }) {
+  const [open,  setOpen]  = useState(false);
+  const users = ls.get("rmap_users", []);
+  const others = users.filter(u => u.id !== currentUser.id);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+
+  return (
+    <div ref={ref} style={{ position:"relative", flexShrink:0 }}>
+      <button onClick={()=>setOpen(p=>!p)} style={{
+        display:"flex", alignItems:"center", gap:"8px",
+        background: open ? INK : "transparent",
+        color:       open ? BG  : INK,
+        border:`1px solid ${open ? INK : BORDER}`,
+        borderRadius:"100px", padding:"6px 12px 6px 6px",
+        cursor:"pointer", transition:"all 0.15s",
+      }}>
+        <div style={{ width:"26px", height:"26px", borderRadius:"8px",
+          background:currentUser.color, display:"flex", alignItems:"center", justifyContent:"center",
+          fontFamily:"'Clash Display',sans-serif", fontWeight:"700", fontSize:"11px", color:"#fff" }}>
+          {currentUser.name.slice(0,2).toUpperCase()}
+        </div>
+        <span style={{ fontFamily:"'Satoshi',sans-serif", fontSize:"12px", fontWeight:"700", maxWidth:"80px",
+          overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+          {currentUser.name}
+        </span>
+        <span style={{ fontSize:"10px", opacity:0.5 }}>{open?"▴":"▾"}</span>
+      </button>
+
+      {open && (
+        <div style={{ position:"absolute", top:"calc(100% + 8px)", right:0,
+          background:CARD, border:`1px solid ${BORDER}`, borderRadius:"16px",
+          padding:"10px", minWidth:"220px", zIndex:300,
+          boxShadow:"0 20px 40px rgba(0,0,0,0.15)", animation:"fadeIn 0.15s ease" }}>
+
+          {/* Current user header */}
+          <div style={{ padding:"10px 12px 14px", borderBottom:`1px solid ${BORDER}`, marginBottom:"8px" }}>
+            <div style={{ fontSize:"9px", letterSpacing:"2px", color:MUTED, marginBottom:"6px" }}>SIGNED IN AS</div>
+            <div style={{ display:"flex", alignItems:"center", gap:"10px" }}>
+              <div style={{ width:"36px", height:"36px", borderRadius:"10px", background:currentUser.color,
+                display:"flex", alignItems:"center", justifyContent:"center",
+                fontFamily:"'Clash Display',sans-serif", fontWeight:"700", fontSize:"14px", color:"#fff" }}>
+                {currentUser.name.slice(0,2).toUpperCase()}
+              </div>
+              <div>
+                <div style={{ fontWeight:"700", fontSize:"14px", color:INK }}>{currentUser.name}</div>
+                <UserProgressBadge uid={currentUser.id} color={currentUser.color} inv={false} />
+              </div>
+            </div>
+          </div>
+
+          {/* Other users */}
+          {others.length > 0 && (
+            <>
+              <div style={{ fontSize:"9px", letterSpacing:"2px", color:MUTED, padding:"4px 12px 8px", fontWeight:"700" }}>SWITCH TO</div>
+              {others.map(u => (
+                <button key={u.id} onClick={()=>{ setOpen(false); onSwitch(u); }}
+                  style={{ width:"100%", display:"flex", alignItems:"center", gap:"10px",
+                    background:"none", border:"none", padding:"10px 12px", cursor:"pointer",
+                    borderRadius:"10px", transition:"background 0.1s",
+                  }}
+                  onMouseEnter={e=>e.currentTarget.style.background=dark?"rgba(255,255,255,0.05)":"#f5f5f5"}
+                  onMouseLeave={e=>e.currentTarget.style.background="none"}>
+                  <div style={{ width:"32px", height:"32px", borderRadius:"9px", background:u.color,
+                    display:"flex", alignItems:"center", justifyContent:"center",
+                    fontFamily:"'Clash Display',sans-serif", fontWeight:"700", fontSize:"12px", color:"#fff" }}>
+                    {u.name.slice(0,2).toUpperCase()}
+                  </div>
+                  <div style={{ flex:1, textAlign:"left" }}>
+                    <div style={{ fontWeight:"700", fontSize:"13px", color:INK }}>{u.name}</div>
+                    <div style={{ fontSize:"10px", color:MUTED }}>{u.pin?"🔒 PIN required":"No PIN"}</div>
+                  </div>
+                  <span style={{ fontSize:"11px", color:MUTED }}>→</span>
+                </button>
+              ))}
+              <div style={{ height:"1px", background:BORDER, margin:"8px 0" }} />
+            </>
+          )}
+
+          {/* Actions */}
+          <button onClick={()=>{ setOpen(false); onSwitch("new"); }}
+            style={{ width:"100%", display:"flex", alignItems:"center", gap:"10px",
+              background:"none", border:"none", padding:"10px 12px", cursor:"pointer",
+              borderRadius:"10px", transition:"background 0.1s" }}
+            onMouseEnter={e=>e.currentTarget.style.background=dark?"rgba(255,255,255,0.05)":"#f5f5f5"}
+            onMouseLeave={e=>e.currentTarget.style.background="none"}>
+            <div style={{ width:"32px", height:"32px", borderRadius:"9px", background:dark?"#222":"#eee",
+              display:"flex", alignItems:"center", justifyContent:"center", fontSize:"16px" }}>+</div>
+            <span style={{ fontSize:"13px", fontWeight:"700", color:INK }}>New Profile</span>
+          </button>
+
+          <button onClick={()=>{ setOpen(false); onLogout(); }}
+            style={{ width:"100%", display:"flex", alignItems:"center", gap:"10px",
+              background:"none", border:"none", padding:"10px 12px", cursor:"pointer",
+              borderRadius:"10px", transition:"background 0.1s" }}
+            onMouseEnter={e=>e.currentTarget.style.background=dark?"rgba(255,255,255,0.05)":"#f5f5f5"}
+            onMouseLeave={e=>e.currentTarget.style.background="none"}>
+            <div style={{ width:"32px", height:"32px", borderRadius:"9px", background:dark?"#222":"#eee",
+              display:"flex", alignItems:"center", justifyContent:"center", fontSize:"14px" }}>↩</div>
+            <span style={{ fontSize:"13px", fontWeight:"700", color:INK }}>Sign Out</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════
+//  MAIN APP (per user)
+// ════════════════════════════════════════════════════════
+function MainApp({ currentUser, onLogout, onSwitchUser }) {
+  const uid = currentUser.id;
+  const K   = s => userKey(uid, s);
+
+  const [activePhase,  setActivePhase]  = useState(0);
+  const [checked,      setChecked]      = useState(() => ls.get(K("checked"), {}));
+  const [todos,        setTodos]        = useState(() => ls.get(K("todos"),   []));
+  const [newTodo,      setNewTodo]      = useState("");
+  const [goal,         setGoal]         = useState(() => ls.get(K("goal"),     ""));
+  const [duration,     setDuration]     = useState(() => ls.get(K("duration"), "6 months"));
+  const [activeView,   setActiveView]   = useState("roadmap");
+  const [activeTopic,  setActiveTopic]  = useState(null);
+  const [openCat,      setOpenCat]      = useState(null);
+  const [dark,         setDark]         = useState(() => ls.get(K("dark"), false));
+
+  // Persist
+  useEffect(() => { ls.set(K("checked"),  checked);  }, [checked]);
+  useEffect(() => { ls.set(K("todos"),    todos);    }, [todos]);
+  useEffect(() => { ls.set(K("goal"),     goal);     }, [goal]);
+  useEffect(() => { ls.set(K("duration"), duration); }, [duration]);
+  useEffect(() => { ls.set(K("dark"), dark); document.body.style.background = dark?"#0d0d0d":"#f2f2f2"; }, [dark]);
+  useEffect(() => { document.body.style.background = dark?"#0d0d0d":"#f2f2f2"; }, []);
+
+  // Stats
+  const checkedSkills = Object.entries(checked).filter(([k,v])=>v&&k.startsWith("sk-")).length;
+  const checkedProjs  = Object.entries(checked).filter(([k,v])=>v&&k.startsWith("proj-")).length;
+  const doneTodos     = todos.filter(t=>t.done).length;
+  const overallPct    = Math.round(((checkedSkills+checkedProjs)/(TOTAL_SKILLS+TOTAL_PROJECTS))*100)||0;
+
+  const toggleKey  = k  => setChecked(p=>({...p,[k]:!p[k]}));
+  const addTodo    = () => { if (!newTodo.trim()) return; setTodos(p=>[...p,{id:Date.now().toString(),text:newTodo.trim(),done:false}]); setNewTodo(""); };
+  const toggleTodo = id => setTodos(p=>p.map(t=>t.id===id?{...t,done:!t.done}:t));
+  const deleteTodo = id => setTodos(p=>p.filter(t=>t.id!==id));
+
+  const phase = PHASES[activePhase];
+
+  // Theme
+  const BG     = dark?"#0d0d0d":"#f2f2f2";
+  const INK    = dark?"#f0f0f0":"#111111";
+  const MUTED  = dark?"#888888":"#838282";
+  const LIGHT  = dark?"#555555":"#b6b5b5";
+  const CARD   = dark?"#161616":"#ffffff";
+  const BORDER = dark?"rgba(255,255,255,0.08)":"rgba(30,30,30,0.1)";
+  const NAV_BG = dark?"rgba(13,13,13,0.93)":"rgba(242,242,242,0.93)";
+
+  const navItems = [
+    {key:"roadmap",label:"ROADMAP"},
+    {key:"goals",  label:"GOALS"},
+    {key:"todos",  label:`TO-DO${todos.length?` (${todos.length})`:""}`},
+  ];
+
+  const themeProps = { dark,INK,BG,MUTED,CARD,BORDER };
+
+  // Handle switch: if "new" → logout to create new, else prompt for PIN if needed
+  const handleSwitch = (target) => {
+    if (target==="new") { onLogout(); return; }
+    if (target.pin) {
+      const p = prompt(`Enter PIN for ${target.name}`);
+      if (p === null) return;
+      if (p !== target.pin) { alert("Incorrect PIN"); return; }
+    }
+    onSwitchUser(target);
+  };
+
+  return (
+    <div style={{ minHeight:"100vh", background:BG, fontFamily:"'Satoshi',sans-serif",
+      color:INK, transition:"background 0.3s,color 0.3s" }}>
+
+      {/* ── NAV ── */}
+      <nav style={{ position:"sticky", top:0, zIndex:200, height:"64px",
+        background:NAV_BG, backdropFilter:"blur(12px)",
+        borderBottom:`1px solid ${BORDER}`,
+        display:"flex", alignItems:"center", padding:"0 16px", gap:"8px" }}>
+        <div style={{ fontFamily:"'Clash Display',sans-serif", fontWeight:"700", fontSize:"18px",
+          letterSpacing:"-0.05em", flex:1, color:INK, whiteSpace:"nowrap" }}>
+          LEARN<span style={{ color:MUTED }}>2027</span>
+        </div>
+        <div style={{ display:"flex", gap:"3px", overflowX:"auto", scrollbarWidth:"none" }}>
+          {navItems.map(n=>(
+            <button key={n.key} onClick={()=>setActiveView(n.key)} style={{
+              background:activeView===n.key?INK:"transparent",
+              color:activeView===n.key?BG:MUTED,
+              border:`1px solid ${activeView===n.key?INK:"transparent"}`,
+              borderRadius:"100px", padding:"5px 11px",
+              fontSize:"10px", letterSpacing:"1.5px",
+              cursor:"pointer", fontFamily:"'Satoshi',sans-serif", fontWeight:"700",
+              transition:"all 0.15s", whiteSpace:"nowrap",
+            }}>{n.label}</button>
+          ))}
+        </div>
+        <button onClick={()=>setDark(p=>!p)} style={{
+          background:dark?"#f0f0f0":"#111", color:dark?"#111":"#f0f0f0",
+          border:"none", borderRadius:"100px", padding:"5px 12px",
+          cursor:"pointer", fontSize:"13px", flexShrink:0, transition:"all 0.2s",
+        }}>{dark?"☀":"☽"}</button>
+        <UserSwitcher currentUser={currentUser} onSwitch={handleSwitch} onLogout={onLogout}
+          dark={dark} INK={INK} BG={BG} MUTED={MUTED} CARD={CARD} BORDER={BORDER} />
+      </nav>
+
+      {/* ── HERO ── */}
+      <div style={{ padding:"48px 24px 36px", borderBottom:`1px solid ${BORDER}`, overflow:"hidden" }}>
+        {/* Greeting */}
+        <div style={{ display:"flex", alignItems:"center", gap:"12px", marginBottom:"20px" }}>
+          <div style={{ width:"44px", height:"44px", borderRadius:"13px", background:currentUser.color,
+            display:"flex", alignItems:"center", justifyContent:"center",
+            fontFamily:"'Clash Display',sans-serif", fontWeight:"700", fontSize:"17px", color:"#fff" }}>
+            {currentUser.name.slice(0,2).toUpperCase()}
+          </div>
+          <div>
+            <div style={{ fontSize:"10px", letterSpacing:"2px", color:MUTED, marginBottom:"2px" }}>WELCOME BACK</div>
+            <div style={{ fontFamily:"'Clash Display',sans-serif", fontWeight:"700", fontSize:"18px",
+              letterSpacing:"-0.03em", color:INK }}>{currentUser.name}</div>
+          </div>
+        </div>
+
+        {/* Echo stack hero */}
+        <div style={{ position:"relative", display:"inline-block", marginBottom:"24px" }}>
+          {["rgba(0,0,0,0.07)","rgba(0,0,0,0.04)","rgba(0,0,0,0.02)"].map((c,i)=>(
+            <div key={i} style={{ position:"absolute", top:`${(i+1)*0.04}em`, left:`-${(i+1)*0.04}em`,
+              fontFamily:"'Clash Display',sans-serif", fontSize:"clamp(38px,8vw,84px)",
+              fontWeight:"700", letterSpacing:"-0.05em", lineHeight:"0.9",
+              color:c, pointerEvents:"none", userSelect:"none", whiteSpace:"nowrap" }}>LEARN 2027</div>
+          ))}
+          <div style={{ position:"relative", fontFamily:"'Clash Display',sans-serif",
+            fontSize:"clamp(38px,8vw,84px)", fontWeight:"700",
+            letterSpacing:"-0.05em", lineHeight:"0.9", color:INK, whiteSpace:"nowrap" }}>LEARN 2027</div>
+        </div>
+
+        {/* Progress */}
+        <div style={{ maxWidth:"460px" }}>
+          <div style={{ display:"flex", justifyContent:"space-between", marginBottom:"8px", alignItems:"baseline" }}>
+            <span style={{ fontSize:"10px", letterSpacing:"1.5px", color:MUTED }}>
+              {checkedSkills} SKILLS · {checkedProjs} PROJECTS · {doneTodos} TASKS DONE
+            </span>
+            <span style={{ fontFamily:"'Clash Display',sans-serif", fontSize:"22px", fontWeight:"700",
+              letterSpacing:"-0.04em", color:INK }}>{overallPct}%</span>
+          </div>
+          <div style={{ height:"3px", background:dark?"#2a2a2a":"#e0e0e0", borderRadius:"2px", overflow:"hidden" }}>
+            <div style={{ width:`${overallPct}%`, height:"100%", background:currentUser.color,
+              borderRadius:"2px", transition:"width 0.6s ease" }} />
+          </div>
+        </div>
+        {goal && (
+          <div style={{ marginTop:"16px", display:"inline-flex", alignItems:"center", gap:"8px",
+            background:INK, color:BG, borderRadius:"100px", padding:"7px 16px",
+            fontSize:"12px", fontWeight:"500" }}>
+            🎯 <strong>{goal}</strong> · {duration}
+          </div>
+        )}
+      </div>
+
+      {/* ── CONTENT ── */}
+      <div style={{ maxWidth:"900px", margin:"0 auto", padding:"0 20px 80px" }}>
+
+        {/* ════ ROADMAP ════ */}
+        {activeView==="roadmap" && (
+          <div style={{ animation:"fadeIn 0.25s ease" }}>
+            {/* Phase tabs */}
+            <div style={{ display:"flex", gap:"8px", paddingTop:"24px", overflowX:"auto",
+              scrollbarWidth:"none", borderBottom:`1px solid ${BORDER}`, paddingBottom:"20px" }}>
+              {PHASES.map((p,i)=>{
+                const done  = p.categories.reduce((a,c,ci)=>a+c.items.filter(it=>checked[`sk-${p.id}-${ci}-${it}`]).length,0);
+                const total = p.categories.reduce((a,c)=>a+c.items.length,0);
+                const pct   = Math.round((done/total)*100);
+                const isActive = activePhase===i;
+                return (
+                  <button key={i} onClick={()=>{setActivePhase(i);setOpenCat(null);}} style={{
+                    background:isActive?INK:CARD, color:isActive?BG:INK,
+                    border:`1px solid ${isActive?INK:BORDER}`, borderRadius:"14px",
+                    padding:"12px 18px", cursor:"pointer", whiteSpace:"nowrap",
+                    fontFamily:"'Satoshi',sans-serif", fontSize:"11px", letterSpacing:"1px", fontWeight:"700",
+                    transition:"all 0.15s", display:"flex", flexDirection:"column",
+                    alignItems:"flex-start", gap:"6px", minWidth:"110px",
+                  }}>
+                    <span>{p.label.toUpperCase()}</span>
+                    <div style={{ width:"100%", height:"2px", background:isActive?"rgba(255,255,255,0.2)":(dark?"#2a2a2a":"#e0e0e0"),
+                      borderRadius:"2px", overflow:"hidden" }}>
+                      <div style={{ width:`${pct}%`, height:"100%", background:isActive?BG:p.color, borderRadius:"2px" }} />
+                    </div>
+                    <span style={{ fontSize:"9px", opacity:0.6 }}>{done}/{total}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Phase header */}
+            <div style={{ margin:"20px 0 14px", padding:"24px", background:CARD,
+              border:`1px solid ${BORDER}`, borderLeft:`4px solid ${phase.color}`, borderRadius:"16px" }}>
+              <div style={{ fontSize:"9px", letterSpacing:"2.5px", color:MUTED, marginBottom:"5px" }}>{phase.duration}</div>
+              <h2 style={{ fontFamily:"'Clash Display',sans-serif", fontSize:"24px", fontWeight:"700",
+                margin:"0 0 6px", letterSpacing:"-0.04em", color:INK }}>{phase.title} — {phase.label}</h2>
+              <p style={{ margin:0, color:MUTED, fontSize:"13px", lineHeight:"1.65" }}>{phase.description}</p>
+            </div>
+
+            {/* Categories */}
+            <div style={{ display:"flex", flexDirection:"column", gap:"9px", marginBottom:"26px" }}>
+              {phase.categories.map((cat,ci)=>{
+                const ck     = `ph${phase.id}-ci${ci}`;
+                const isOpen = openCat===ck;
+                const catDone= cat.items.filter(it=>checked[`sk-${phase.id}-${ci}-${it}`]).length;
+                return (
+                  <div key={ci} style={{ background:CARD, border:`1px solid ${isOpen?INK:BORDER}`,
+                    borderRadius:"13px", overflow:"hidden", transition:"border-color 0.2s" }}>
+                    <button onClick={()=>setOpenCat(isOpen?null:ck)} style={{ width:"100%", background:"none",
+                      border:"none", padding:"14px 18px", display:"flex", alignItems:"center",
+                      gap:"10px", cursor:"pointer", textAlign:"left" }}>
+                      <span style={{ fontFamily:"'Clash Display',sans-serif", fontWeight:"700",
+                        fontSize:"14px", letterSpacing:"-0.02em", flex:1, color:INK }}>{cat.name}</span>
+                      <span style={{ fontSize:"10px", color:MUTED, fontFamily:"monospace",
+                        background:dark?"#222":"#f2f2f2", padding:"2px 9px", borderRadius:"20px" }}>
+                        {catDone}/{cat.items.length}
+                      </span>
+                      <div style={{ width:"22px", height:"22px", background:isOpen?INK:"transparent",
+                        border:`1px solid ${isOpen?INK:LIGHT}`, borderRadius:"50%",
+                        display:"flex", alignItems:"center", justifyContent:"center",
+                        color:isOpen?BG:LIGHT, fontSize:"10px", transition:"all 0.2s", flexShrink:0,
+                        transform:isOpen?"rotate(180deg)":"rotate(0deg)" }}>▾</div>
+                    </button>
+                    {isOpen && (
+                      <div style={{ borderTop:`1px solid ${BORDER}`, padding:"14px 18px",
+                        display:"flex", flexWrap:"wrap", gap:"7px" }}>
+                        {cat.items.map((item,ii)=>{
+                          const k    = `sk-${phase.id}-${ci}-${item}`;
+                          const done = checked[k];
+                          return (
+                            <div key={ii} style={{ display:"flex", alignItems:"stretch",
+                              border:`1px solid ${done?INK:(dark?"rgba(255,255,255,0.15)":"#e0e0e0")}`,
+                              borderRadius:"9px", overflow:"hidden", background:done?INK:"transparent",
+                              transition:"all 0.15s" }}>
+                              <button onClick={()=>toggleKey(k)} style={{ background:"transparent", border:"none",
+                                borderRight:`1px solid ${done?"#333":(dark?"rgba(255,255,255,0.1)":"#e0e0e0")}`,
+                                padding:"6px 9px", cursor:"pointer", color:done?"#aaa":LIGHT, fontSize:"11px",
+                                display:"flex", alignItems:"center" }}>{done?"✓":"○"}</button>
+                              <button onClick={()=>setActiveTopic({name:item,phase:phase.label})} style={{
+                                background:"transparent", border:"none", padding:"6px 11px 6px 9px",
+                                cursor:"pointer", color:done?BG:INK, fontSize:"12px",
+                                fontFamily:"'Satoshi',sans-serif", fontWeight:"600",
+                                display:"flex", alignItems:"center", gap:"4px" }}>
+                                {item}
+                                <span style={{ color:done?"#888":LIGHT, fontSize:"9px" }}>↗</span>
+                              </button>
+                            </div>
+                          );
+                        })}
+                        <div style={{ width:"100%", marginTop:"6px", fontSize:"10px", color:MUTED }}>
+                          ↗ Click skill name to see how to learn it
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Projects */}
+            <div>
+              <div style={{ display:"flex", alignItems:"center", gap:"10px", marginBottom:"12px" }}>
+                <div style={{ fontSize:"9px", letterSpacing:"2.5px", color:MUTED, fontWeight:"700", flex:1 }}>
+                  PROJECTS — {phase.label.toUpperCase()}
+                </div>
+                <div style={{ fontSize:"10px", color:MUTED, fontFamily:"monospace" }}>
+                  {phase.projects.filter(p=>checked[`proj-${p.id}`]).length}/{phase.projects.length}
+                </div>
+              </div>
+              <div style={{ display:"flex", flexDirection:"column", gap:"9px" }}>
+                {phase.projects.map(proj=>{
+                  const k    = `proj-${proj.id}`;
+                  const done = checked[k];
+                  return (
+                    <div key={proj.id} onClick={()=>toggleKey(k)} style={{
+                      background:done?INK:CARD, color:done?BG:INK,
+                      border:`1px solid ${done?INK:BORDER}`, borderRadius:"13px",
+                      padding:"16px 20px", display:"flex", gap:"14px", alignItems:"flex-start",
+                      cursor:"pointer", transition:"all 0.2s" }}>
+                      <div style={{ width:"20px", height:"20px", flexShrink:0,
+                        border:`2px solid ${done?BG:INK}`, borderRadius:"50%",
+                        display:"flex", alignItems:"center", justifyContent:"center",
+                        fontSize:"10px", fontWeight:"700", marginTop:"2px",
+                        background:done?"rgba(255,255,255,0.15)":"transparent" }}>{done?"✓":""}</div>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontFamily:"'Clash Display',sans-serif", fontWeight:"700", fontSize:"14px",
+                          letterSpacing:"-0.02em", marginBottom:"4px",
+                          textDecoration:done?"line-through":"none", opacity:done?0.7:1 }}>{proj.title}</div>
+                        <div style={{ fontSize:"12px", lineHeight:"1.6", opacity:done?0.5:0.7 }}>{proj.desc}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div style={{ display:"flex", justifyContent:"space-between", marginTop:"32px" }}>
+              {activePhase>0 ? (
+                <button onClick={()=>setActivePhase(activePhase-1)} style={{ background:"transparent",
+                  border:`1px solid ${BORDER}`, color:MUTED, borderRadius:"100px", padding:"10px 20px",
+                  cursor:"pointer", fontSize:"11px", letterSpacing:"1px",
+                  fontFamily:"'Satoshi',sans-serif", fontWeight:"700" }}>← PREV</button>
+              ):<div />}
+              {activePhase<PHASES.length-1 && (
+                <button onClick={()=>setActivePhase(activePhase+1)} style={{ background:INK, border:"none",
+                  color:BG, borderRadius:"100px", padding:"10px 22px", cursor:"pointer",
+                  fontSize:"11px", letterSpacing:"1px", fontFamily:"'Satoshi',sans-serif", fontWeight:"700" }}>
+                  NEXT PHASE →</button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ════ GOALS ════ */}
+        {activeView==="goals" && (
+          <div style={{ paddingTop:"36px", animation:"fadeIn 0.25s ease" }}>
+            <div style={{ fontSize:"9px", letterSpacing:"3px", color:MUTED, marginBottom:"6px" }}>YOUR NORTH STAR</div>
+            <h2 style={{ fontFamily:"'Clash Display',sans-serif", fontSize:"32px", fontWeight:"700",
+              letterSpacing:"-0.05em", margin:"0 0 4px", color:INK }}>Learning Goals</h2>
+            <p style={{ color:MUTED, marginBottom:"32px", fontSize:"13px" }}>Define what you want to achieve and when.</p>
+
+            <div style={{ display:"flex", flexDirection:"column", gap:"22px", maxWidth:"500px" }}>
+              <div>
+                <label style={{ fontSize:"9px", letterSpacing:"2.5px", color:MUTED, display:"block", marginBottom:"8px", fontWeight:"700" }}>YOUR GOAL</label>
+                <input value={goal} onChange={e=>setGoal(e.target.value)}
+                  placeholder="e.g. Get a data analyst job by Dec 2026"
+                  style={{ width:"100%", padding:"13px 15px", background:CARD,
+                    border:`1px solid ${dark?"rgba(255,255,255,0.15)":"#e0e0e0"}`,
+                    borderRadius:"12px", fontSize:"14px", fontFamily:"'Satoshi',sans-serif",
+                    color:INK, outline:"none", boxSizing:"border-box" }} />
+              </div>
+              <div>
+                <label style={{ fontSize:"9px", letterSpacing:"2.5px", color:MUTED, display:"block", marginBottom:"9px", fontWeight:"700" }}>TARGET DURATION</label>
+                <div style={{ display:"flex", gap:"8px", flexWrap:"wrap" }}>
+                  {["3 months","6 months","9 months","1 year"].map(d=>(
+                    <button key={d} onClick={()=>setDuration(d)} style={{
+                      background:duration===d?INK:CARD, color:duration===d?BG:INK,
+                      border:`1px solid ${duration===d?INK:(dark?"rgba(255,255,255,0.15)":"#e0e0e0")}`,
+                      borderRadius:"100px", padding:"8px 16px", fontSize:"12px", cursor:"pointer",
+                      fontFamily:"'Satoshi',sans-serif", fontWeight:"600", transition:"all 0.15s" }}>{d}</button>
+                  ))}
+                </div>
+              </div>
+              <div style={{ height:"1px", background:BORDER }} />
+              <div>
+                <div style={{ fontSize:"9px", letterSpacing:"2.5px", color:MUTED, marginBottom:"18px", fontWeight:"700" }}>PHASE BREAKDOWN</div>
+                {PHASES.map((p,i)=>{
+                  const sd  = p.categories.reduce((a,c,ci)=>a+c.items.filter(it=>checked[`sk-${p.id}-${ci}-${it}`]).length,0);
+                  const ts  = p.categories.reduce((a,c)=>a+c.items.length,0);
+                  const pd  = p.projects.filter(pr=>checked[`proj-${pr.id}`]).length;
+                  const tot = ts+p.projects.length;
+                  const dn  = sd+pd;
+                  const pct = Math.round((dn/tot)*100)||0;
+                  return (
+                    <div key={i} style={{ marginBottom:"18px" }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", marginBottom:"7px", alignItems:"center" }}>
+                        <div>
+                          <span style={{ fontWeight:"700", fontSize:"13px", color:INK }}>{p.title}</span>
+                          <span style={{ color:MUTED, fontSize:"12px" }}> — {p.label}</span>
+                        </div>
+                        <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
+                          <span style={{ fontFamily:"monospace", fontSize:"10px", color:MUTED }}>{dn}/{tot}</span>
+                          <span style={{ fontFamily:"'Clash Display',sans-serif", fontWeight:"700", fontSize:"14px",
+                            color:pct===100?p.color:INK }}>{pct}%</span>
+                        </div>
+                      </div>
+                      <div style={{ height:"4px", background:dark?"#2a2a2a":"#e8e8e8", borderRadius:"2px", overflow:"hidden" }}>
+                        <div style={{ width:`${pct}%`, height:"100%", background:pct===100?p.color:currentUser.color,
+                          borderRadius:"2px", transition:"width 0.5s ease" }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ════ TODOS ════ */}
+        {activeView==="todos" && (
+          <div style={{ paddingTop:"36px", animation:"fadeIn 0.25s ease" }}>
+            <div style={{ fontSize:"9px", letterSpacing:"3px", color:MUTED, marginBottom:"6px" }}>YOUR LIST</div>
+            <h2 style={{ fontFamily:"'Clash Display',sans-serif", fontSize:"32px", fontWeight:"700",
+              letterSpacing:"-0.05em", margin:"0 0 4px", color:INK }}>To-Do</h2>
+            <p style={{ color:MUTED, marginBottom:"24px", fontSize:"13px" }}>Add tasks, deadlines, or daily habits.</p>
+
+            <div style={{ display:"flex", gap:"8px", marginBottom:"20px" }}>
+              <input value={newTodo} onChange={e=>setNewTodo(e.target.value)}
+                onKeyDown={e=>e.key==="Enter"&&addTodo()}
+                placeholder="Add a task and press Enter…"
+                style={{ flex:1, padding:"12px 15px", background:CARD,
+                  border:`1px solid ${dark?"rgba(255,255,255,0.15)":"#e0e0e0"}`,
+                  borderRadius:"12px", fontSize:"14px", fontFamily:"'Satoshi',sans-serif",
+                  color:INK, outline:"none" }} />
+              <button onClick={addTodo} style={{ background:INK, color:BG, border:"none",
+                borderRadius:"12px", padding:"0 18px", cursor:"pointer", fontSize:"22px", lineHeight:1 }}>+</button>
+            </div>
+
+            <div style={{ display:"flex", gap:"9px", marginBottom:"18px" }}>
+              {[{l:"TOTAL",v:todos.length,a:false},{l:"DONE",v:doneTodos,a:true},{l:"LEFT",v:todos.length-doneTodos,a:false}].map(s=>(
+                <div key={s.l} style={{ background:s.a?INK:CARD, color:s.a?BG:INK,
+                  border:`1px solid ${s.a?INK:BORDER}`, borderRadius:"12px",
+                  padding:"13px 14px", flex:1, textAlign:"center" }}>
+                  <div style={{ fontFamily:"'Clash Display',sans-serif", fontWeight:"700",
+                    fontSize:"24px", letterSpacing:"-0.04em" }}>{s.v}</div>
+                  <div style={{ fontSize:"8px", letterSpacing:"2px", opacity:0.6, marginTop:"2px" }}>{s.l}</div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display:"flex", flexDirection:"column", gap:"7px" }}>
+              {todos.length===0 && (
+                <div style={{ textAlign:"center", padding:"40px 0", color:LIGHT, fontSize:"13px",
+                  border:`1px dashed ${BORDER}`, borderRadius:"13px" }}>No tasks yet 👆</div>
+              )}
+              {todos.map(t=>(
+                <div key={t.id} style={{ display:"flex", alignItems:"center", gap:"11px",
+                  background:CARD, border:`1px solid ${BORDER}`, borderRadius:"11px",
+                  padding:"12px 15px", opacity:t.done?0.55:1, transition:"opacity 0.2s" }}>
+                  <button onClick={()=>toggleTodo(t.id)} style={{ width:"20px", height:"20px", flexShrink:0,
+                    border:`2px solid ${t.done?INK:LIGHT}`, borderRadius:"50%",
+                    background:t.done?INK:"transparent", cursor:"pointer",
+                    display:"flex", alignItems:"center", justifyContent:"center",
+                    color:BG, fontSize:"10px", fontWeight:"700" }}>{t.done?"✓":""}</button>
+                  <span style={{ flex:1, fontSize:"13px", textDecoration:t.done?"line-through":"none",
+                    color:t.done?MUTED:INK }}>{t.text}</span>
+                  <button onClick={()=>deleteTodo(t.id)} style={{ background:"none", border:"none",
+                    color:LIGHT, cursor:"pointer", fontSize:"17px", lineHeight:1 }}>×</button>
+                </div>
+              ))}
+            </div>
+            {doneTodos>0 && (
+              <button onClick={()=>setTodos(p=>p.filter(t=>!t.done))} style={{ marginTop:"14px",
+                background:"none", border:`1px solid ${BORDER}`, borderRadius:"100px",
+                padding:"7px 16px", fontSize:"10px", letterSpacing:"1.5px", color:MUTED,
+                cursor:"pointer", fontFamily:"'Satoshi',sans-serif", fontWeight:"700" }}>CLEAR COMPLETED</button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div style={{ borderTop:`1px solid ${BORDER}`, padding:"20px 24px",
+        display:"flex", justifyContent:"space-between", alignItems:"center",
+        flexWrap:"wrap", gap:"10px", fontSize:"9px", letterSpacing:"2px", color:LIGHT }}>
+        <span>FOCUS · BUILD · SHIP · REPEAT</span>
+        <span style={{ color:MUTED }}>Signed in as <strong style={{ color:INK }}>{currentUser.name}</strong></span>
+        <span style={{ fontFamily:"monospace" }}>{overallPct}% COMPLETE</span>
+      </div>
+
+      {activeTopic && (
+        <TopicModal topic={activeTopic.name} phase={activeTopic.phase}
+          onClose={()=>setActiveTopic(null)} {...themeProps} />
+      )}
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════
+//  ROOT
+// ════════════════════════════════════════════════════════
+function Root() {
+  const [currentUser, setCurrentUser] = useState(() => {
+    const last = ls.get("rmap_lastUser");
+    if (!last) return null;
+    const users = ls.get("rmap_users", []);
+    return users.find(u=>u.id===last.id) || null;
+  });
+  const [switchTarget, setSwitchTarget] = useState(null);
+
+  const login  = (user) => { ls.set("rmap_lastUser", user); setCurrentUser(user); setSwitchTarget(null); };
+  const logout = ()     => { ls.remove("rmap_lastUser"); setCurrentUser(null); };
+  const switchUser = (user) => { ls.set("rmap_lastUser", user); setCurrentUser(user); };
+
+  if (!currentUser) return <LoginScreen onLogin={login} />;
+  return <MainApp currentUser={currentUser} onLogout={logout} onSwitchUser={switchUser} />;
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<Root />);
+</script>
+</body>
+</html>
